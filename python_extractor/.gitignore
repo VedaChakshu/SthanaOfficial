@@ -1,0 +1,11 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.env
+
+# Data Files (Generated or Large)
+cities500.zip
+cities500.txt
+cities500.sqlite

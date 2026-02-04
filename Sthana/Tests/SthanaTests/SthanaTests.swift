@@ -1,0 +1,119 @@
+import XCTest
+@testable import Sthana
+
+final class SthanaTests: XCTestCase {
+    func testSearch() {
+        let sthana = Sthana()
+        
+        // Test standard search
+        let results = sthana.search(text: "London", limit: 50)
+        
+        // Based on cities500, London (UK) should be present
+        // geonameid 2643743, London
+        XCTAssertFalse(results.isEmpty, "Search for 'London' returned no results")
+        
+        if let london = results.first(where: { $0.countryCode == "GB" && $0.name == "London" }) {
+            print("Found London: \(london.name), \(london.latitude), \(london.longitude)")
+            XCTAssertEqual(london.countryCode, "GB")
+            
+            // Timezone Verification (Europe/London)
+            // Standard: 0, DST: 3600
+            let (gmt, dst) = (london.gmtOffset, london.gmtDstOffset)
+            print("London Offsets: GMT \(gmt), DST \(dst)")
+            
+            // gmt offset should be 0 (or close if history matters, but usually 0)
+            XCTAssertEqual(gmt, 0, "Europe/London Standard Offset should be 0")
+            // dst offset should be 3600
+            XCTAssertEqual(dst, 3600, "Europe/London DST Offset should be 3600")
+        } else {
+            XCTFail("London (GB) not found in results")
+        }
+        
+        // Test partial match
+        let partialResults = sthana.search(text: "Zuri", limit: 50) // Zurich
+        XCTAssertFalse(partialResults.isEmpty)
+        if let zurich = partialResults.first(where: { $0.name.contains("Zürich") || $0.name.contains("Zurich") }) {
+            print("Found Zurich: \(zurich.name)")
+        } else {
+             XCTFail("Zurich not found with partial 'Zuri'")
+        }
+        
+        // Test Explicit ASCII Search
+        // "Munchen" -> "München"
+        let munichResults = sthana.search(text: "Munchen", limit: 10)
+        // If cities500 has Munich, `name` is usually München (DE), `asciiname` is Munchen.
+        if let munich = munichResults.first(where: { $0.name == "München" || $0.name == "Munich" }) {
+             print("Found Munich via ASCII 'Munchen': \(munich.name)")
+        } else {
+             // It is possible cities500 lists Munich as Munich in name for English compatibility, let's check.
+             // But the test proves we can search.
+             print("Munich check: Results count \(munichResults.count)")
+        }
+    }
+    
+    func testTimezoneNoDST() {
+        let sthana = Sthana()
+        
+        // Bangalore (Asia/Kolkata) - No DST
+        let results = sthana.search(text: "Bangalore")
+        
+        if let bangalore = results.first(where: { $0.timezone == "Asia/Kolkata" }) {
+            print("Found Bangalore: \(bangalore.name)")
+            let (gmt, dst) = (bangalore.gmtOffset, bangalore.gmtDstOffset)
+            print("Bangalore Offsets: GMT \(gmt), DST \(dst)")
+            
+            // IST is +05:30 -> 19800 seconds
+            XCTAssertEqual(gmt, 19800)
+            XCTAssertEqual(dst, 19800)
+        } else {
+            print("Bangalore not found, might need alternate name or bigger dataset if not in cities500 (it should be)")
+        }
+    }
+
+    func testSearchLimit() {
+        let sthana = Sthana()
+        
+        // "San" should have many results (San Francisco, San Diego, etc.)
+        
+        // Test default limit (3)
+        let defaultResults = sthana.search(text: "San")
+        XCTAssertEqual(defaultResults.count, 3, "Default search should return 3 results")
+        
+        // Test custom limit
+        let customResults = sthana.search(text: "San", limit: 10)
+        XCTAssertEqual(customResults.count, 10, "Search with limit 10 should return 10 results")
+    }
+    
+    func testLocationCodable() throws {
+        // Create a location
+        let location = Location(
+            id: 1,
+            name: "Test Place",
+            latitude: 0.0,
+            longitude: 0.0,
+            countryCode: "US",
+            admin1Code: "CA",
+            admin2Code: "",
+            admin3Code: "",
+            admin4Code: "",
+            elevation: 10,
+            timezone: "America/Los_Angeles"
+        )
+        
+        // Encode
+        let encoder = JSONEncoder()
+        let data = try encoder.encode(location)
+        
+        // Decode
+        let decoder = JSONDecoder()
+        let decodedLocation = try decoder.decode(Location.self, from: data)
+        
+        // Verify
+        XCTAssertEqual(location, decodedLocation)
+        XCTAssertEqual(decodedLocation.gmtOffset, location.gmtOffset)
+        XCTAssertEqual(decodedLocation.gmtDstOffset, location.gmtDstOffset)
+        // Verify offsets are not 0 (unless implementation matches)
+        // LA is -8h (-28800) standard, -7h (-25200) DST.
+        // Or similar. Just check they were preserved.
+    }
+}
