@@ -97,4 +97,11 @@ public class Sthana {
         }
         return ""
     }
+    
+    public func isDaylightSavingTime(date: Date, location: Location) -> Bool {
+        guard let tz = TimeZone(identifier: location.timezone) else {
+            return false
+        }
+        return tz.isDaylightSavingTime(for: date)
+    }
 }

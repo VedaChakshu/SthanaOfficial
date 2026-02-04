@@ -116,4 +116,54 @@ final class SthanaTests: XCTestCase {
         // LA is -8h (-28800) standard, -7h (-25200) DST.
         // Or similar. Just check they were preserved.
     }
+    
+    func testDSTCheck() {
+        let sthana = Sthana()
+        
+        // Create a location for London (observes DST)
+        let london = Location(
+             id: 2643743,
+             name: "London",
+             latitude: 51.5,
+             longitude: -0.12,
+             countryCode: "GB",
+             admin1Code: "", admin2Code: "", admin3Code: "", admin4Code: "",
+             elevation: 0,
+             timezone: "Europe/London"
+        )
+        
+        let tz = TimeZone(identifier: "Europe/London")!
+        
+        // Date in Summer (DST active): July 1st
+        // Note: Creating date properly without current timezone interference
+        let calendar = Calendar.current
+        var components = DateComponents()
+        components.year = 2024
+        components.month = 7
+        components.day = 1
+        components.timeZone = tz
+        let summerDate = calendar.date(from: components)!
+        
+        XCTAssertTrue(sthana.isDaylightSavingTime(date: summerDate, location: london), "London should be in DST in July")
+        
+        // Date in Winter (DST inactive): January 1st
+        components.month = 1
+        let winterDate = calendar.date(from: components)!
+        
+        XCTAssertFalse(sthana.isDaylightSavingTime(date: winterDate, location: london), "London should NOT be in DST in January")
+        
+        // Location w/o DST: Bangalore
+        let bangalore = Location(
+             id: 1277333,
+             name: "Bangalore",
+             latitude: 12.97,
+             longitude: 77.59,
+             countryCode: "IN",
+             admin1Code: "", admin2Code: "", admin3Code: "", admin4Code: "",
+             elevation: 920,
+             timezone: "Asia/Kolkata"
+        )
+        
+        XCTAssertFalse(sthana.isDaylightSavingTime(date: summerDate, location: bangalore), "Bangalore should never be in DST")
+    }
 }
