@@ -4,7 +4,7 @@ This directory contains scripts to generate a SQLite database from GeoNames data
 
 ## Database Structure
 
-The generated database `cities500.sqlite` contains a single table `geoname`.
+The generated database `cities500.sqlite` contains the main `geoname` table and two helper tables for Administrative Divisions.
 
 ### Table: `geoname`
 
@@ -30,6 +30,50 @@ The generated database `cities500.sqlite` contains a single table `geoname`.
 | `timezone` | TEXT | The iana timezone id |
 | `modification_date` | TEXT | Date of last modification in yyyy-MM-dd format |
 
-## Files
-- `generate_db.py`: Script to generate the SQLite database from `cities500.txt`.
-- `cities500.txt`: Raw data from GeoNames (extracted from zip).
+### Table: `admin1_codes` (States/Provinces)
+
+| Column | Type | Description |
+| :--- | :--- | :--- |
+| `code` | TEXT | Concatenated code (e.g., "US.CA") |
+| `name` | TEXT | Name (e.g., "California") |
+| `asciiname` | TEXT | ASCII Name |
+| `geonameid` | INTEGER | GeoName ID |
+
+### Table: `admin2_codes` (Counties/Districts)
+
+| Column | Type | Description |
+| :--- | :--- | :--- |
+| `code` | TEXT | Concatenated code (e.g., "US.CA.075") |
+| `name` | TEXT | Name (e.g., "San Francisco County") |
+| `asciiname` | TEXT | ASCII Name |
+| `geonameid` | INTEGER | GeoName ID |
+
+## Usage
+
+### 1. Download Data
+
+Download the required files from [GeoNames](http://download.geonames.org/export/dump/):
+
+```bash
+# Main Data (Cities with > 500 population)
+curl -O http://download.geonames.org/export/dump/cities500.zip
+unzip cities500.zip
+
+# Admin Codes
+curl -O http://download.geonames.org/export/dump/admin1CodesASCII.txt
+curl -O http://download.geonames.org/export/dump/admin2Codes.txt
+```
+
+### 2. Generate Database
+
+Run the script to generate `cities500.sqlite`:
+
+```bash
+python3 generate_db.py
+```
+
+This will produce `cities500.sqlite`. You can then move this file to the Swift package resources:
+
+```bash
+mv cities500.sqlite ../Sources/Sthana/Resources/
+```

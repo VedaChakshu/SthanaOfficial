@@ -1,6 +1,6 @@
 import Foundation
 
-public struct Location: Identifiable, Hashable, Codable {
+public struct Location: Identifiable, Hashable, Codable, Sendable {
     public let id: Int // geonameid
     public let name: String
     public let latitude: Double
