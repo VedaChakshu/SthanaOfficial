@@ -30,11 +30,14 @@ public class Sthana {
         
         var queryStatement: OpaquePointer?
         let queryString = """
-            SELECT geonameid, name, latitude, longitude, country_code, 
-                   admin1_code, admin2_code, admin3_code, admin4_code, 
-                   elevation, timezone 
+            SELECT geoname.geonameid, geoname.name, geoname.latitude, geoname.longitude, geoname.country_code, 
+                   geoname.admin1_code, geoname.admin2_code, geoname.admin3_code, geoname.admin4_code, 
+                   geoname.elevation, geoname.timezone,
+                   admin1_codes.name, admin2_codes.name
             FROM geoname 
-            WHERE name LIKE ? OR asciiname LIKE ? OR alternatenames LIKE ?
+            LEFT JOIN admin1_codes ON geoname.country_code || '.' || geoname.admin1_code = admin1_codes.code
+            LEFT JOIN admin2_codes ON geoname.country_code || '.' || geoname.admin1_code || '.' || geoname.admin2_code = admin2_codes.code
+            WHERE geoname.name LIKE ? OR geoname.asciiname LIKE ? OR geoname.alternatenames LIKE ?
             LIMIT ?;
         """
         
@@ -66,6 +69,9 @@ public class Sthana {
                 let elevation = Int(sqlite3_column_int(queryStatement, 9))
                 let timezone = decodeString(queryStatement, 10)
                 
+                let admin1Name = decodeString(queryStatement, 11)
+                let admin2Name = decodeString(queryStatement, 12)
+                
                 let location = Location(
                     id: id,
                     name: name,
@@ -77,7 +83,9 @@ public class Sthana {
                     admin3Code: admin3,
                     admin4Code: admin4,
                     elevation: elevation,
-                    timezone: timezone
+                    timezone: timezone,
+                    admin1Name: admin1Name.isEmpty ? nil : admin1Name,
+                    admin2Name: admin2Name.isEmpty ? nil : admin2Name
                 )
                 
                 locations.append(location)

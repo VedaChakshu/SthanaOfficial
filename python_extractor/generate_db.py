@@ -3,6 +3,8 @@ import csv
 import os
 
 INPUT_FILE = "cities500.txt"
+ADMIN1_FILE = "admin1CodesASCII.txt"
+ADMIN2_FILE = "admin2Codes.txt"
 DB_FILE = "cities500.sqlite"
 
 def create_database():
@@ -15,7 +17,7 @@ def create_database():
     # Disable WAL mode for transportability
     cursor.execute("PRAGMA journal_mode = DELETE;")
     
-    # Create table
+    # Create tables
     cursor.execute("""
         CREATE TABLE geoname (
             geonameid INTEGER PRIMARY KEY,
@@ -40,9 +42,63 @@ def create_database():
         );
     """)
     
-    print(f"Created database {DB_FILE} and table 'geoname'.")
+    cursor.execute("""
+        CREATE TABLE admin1_codes (
+            code TEXT PRIMARY KEY,
+            name TEXT,
+            asciiname TEXT,
+            geonameid INTEGER
+        );
+    """)
+
+    cursor.execute("""
+        CREATE TABLE admin2_codes (
+            code TEXT PRIMARY KEY,
+            name TEXT,
+            asciiname TEXT,
+            geonameid INTEGER
+        );
+    """)
     
-    # Read data and insert
+    print(f"Created database {DB_FILE} with tables.")
+    
+    # --- Process Admin1 Codes ---
+    print(f"Reading from {ADMIN1_FILE}...")
+    try:
+        with open(ADMIN1_FILE, 'r', encoding='utf-8') as f:
+            reader = csv.reader(f, delimiter='\t', quoting=csv.QUOTE_NONE)
+            batch = []
+            for row in reader:
+                if len(row) < 4: continue
+                # format: code, name, asciiname, geonameid
+                record = (row[0], row[1], row[2], int(row[3]))
+                batch.append(record)
+            
+            cursor.executemany("INSERT INTO admin1_codes VALUES (?, ?, ?, ?)", batch)
+            conn.commit()
+            print(f"Imported {len(batch)} admin1 codes.")
+    except FileNotFoundError:
+        print(f"Warning: {ADMIN1_FILE} not found.")
+
+    # --- Process Admin2 Codes ---
+    print(f"Reading from {ADMIN2_FILE}...")
+    try:
+        with open(ADMIN2_FILE, 'r', encoding='utf-8') as f:
+            reader = csv.reader(f, delimiter='\t', quoting=csv.QUOTE_NONE)
+            batch = []
+            for row in reader:
+                if len(row) < 4: continue
+                # format: code, name, asciiname, geonameid
+                record = (row[0], row[1], row[2], int(row[3]))
+                batch.append(record)
+            
+            cursor.executemany("INSERT INTO admin2_codes VALUES (?, ?, ?, ?)", batch)
+            conn.commit()
+            print(f"Imported {len(batch)} admin2 codes.")
+    except FileNotFoundError:
+        print(f"Warning: {ADMIN2_FILE} not found.")
+
+    # --- Process Geonames ---
     print(f"Reading from {INPUT_FILE}...")
     
     count = 0
@@ -58,17 +114,6 @@ def create_database():
                 if len(row) != 19:
                     print(f"Skipping malformed row {count + 1}: {row}")
                     continue
-                
-                # Parse numeric fields to avoid storing them as text if they are valid numbers
-                # geonameid is index 0
-                # latitude is index 4
-                # longitude is index 5
-                # population is index 14
-                # elevation is index 15
-                # dem is index 16
-                
-                # Note: csv reader returns all strings. We rely on sqlite to handle typing or we can cast.
-                # It's better to cast explicitly for the executemany.
                 
                 record = (
                     int(row[0]) if row[0] else None,
@@ -111,6 +156,13 @@ def create_database():
                 conn.commit()
                 
         print(f"\nSuccessfully imported {count} rows into {DB_FILE}.")
+        
+        # Create Indexes
+        print("Creating indexes...")
+        cursor.execute("CREATE INDEX idx_geoname_name ON geoname(name);")
+        # Add index for joins
+        cursor.execute("CREATE INDEX idx_geoname_admin1 ON geoname(country_code, admin1_code);")
+        cursor.execute("CREATE INDEX idx_geoname_admin2 ON geoname(country_code, admin1_code, admin2_code);")
         
     except FileNotFoundError:
         print(f"Error: {INPUT_FILE} not found.")

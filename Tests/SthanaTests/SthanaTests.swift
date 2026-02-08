@@ -166,4 +166,32 @@ final class SthanaTests: XCTestCase {
         
         XCTAssertFalse(sthana.isDaylightSavingTime(date: summerDate, location: bangalore), "Bangalore should never be in DST")
     }
+    
+    func testAdminNames() {
+        let sthana = Sthana()
+        
+        // Search for Madanapalle (IN)
+        let results = sthana.search(text: "Madanapalle", limit: 3)
+        
+        if let mpl = results.first(where: { $0.countryCode == "IN" }) {
+            print("Found Madanapalle: \(mpl.name), Admin1: \(mpl.admin1Name ?? "nil"), Admin2: \(mpl.admin2Name ?? "nil")")
+            
+            // Verify Admin1 is Andhra Pradesh
+            XCTAssertEqual(mpl.admin1Name, "Andhra Pradesh")
+            
+            // Verify Admin2 (District) - Chittoor or Annamayya (depending on DB freshness)
+            XCTAssertNotNil(mpl.admin2Name)
+            if let admin2 = mpl.admin2Name {
+                print("Madanapalle Admin2: \(admin2)")
+            }
+        } else {
+             XCTFail("Madanapalle (IN) not found in results")
+        }
+        
+        // Keep London test as a secondary verification for GB
+        let londonResults = sthana.search(text: "London", limit: 3)
+        if let london = londonResults.first(where: { $0.countryCode == "GB" }) {
+             XCTAssertEqual(london.admin1Name, "England")
+        }
+    }
 }

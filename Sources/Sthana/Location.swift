@@ -13,11 +13,15 @@ public struct Location: Identifiable, Hashable, Codable {
     public let elevation: Int
     public let timezone: String
     
+    // Admin Names
+    public let admin1Name: String?
+    public let admin2Name: String?
+    
     // Stored properties for TimeZone offsets
     public let gmtOffset: Int
     public let gmtDstOffset: Int
     
-    public init(id: Int, name: String, latitude: Double, longitude: Double, countryCode: String, admin1Code: String, admin2Code: String, admin3Code: String, admin4Code: String, elevation: Int, timezone: String) {
+    public init(id: Int, name: String, latitude: Double, longitude: Double, countryCode: String, admin1Code: String, admin2Code: String, admin3Code: String, admin4Code: String, elevation: Int, timezone: String, admin1Name: String? = nil, admin2Name: String? = nil) {
         self.id = id
         self.name = name
         self.latitude = latitude
@@ -29,6 +33,8 @@ public struct Location: Identifiable, Hashable, Codable {
         self.admin4Code = admin4Code
         self.elevation = elevation
         self.timezone = timezone
+        self.admin1Name = admin1Name
+        self.admin2Name = admin2Name
         
         // Calculate offsets during initialization
         let (std, dst) = Location.getTimeZoneOffsets(for: timezone)
